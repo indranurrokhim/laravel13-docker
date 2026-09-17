@@ -3,10 +3,17 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
-    ports:
-      - "5173:5173"
     volumes:
       - ./src:/var/www/html
+
+  vite:
+    image: node:24-bookworm-slim
+    working_dir: /var/www/html
+    volumes:
+      - ./src:/var/www/html
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
 
   web:
     image: nginx:latest
