@@ -1,0 +1,8 @@
+FROM composer/composer:2-bin AS composer
+FROM php:8.4-fpm
+
+COPY --from=composer /composer /usr/bin/composer
+
+RUN docker-php-ext-install pdo_mysql
+
+WORKDIR /var/www/html
