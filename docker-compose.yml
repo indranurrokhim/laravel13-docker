@@ -5,12 +5,14 @@ services:
       dockerfile: docker/php/Dockerfile
     volumes:
       - ./src:/var/www/html
+      - vendor:/var/www/html/vendor
 
   vite:
     image: node:24-bookworm-slim
     working_dir: /var/www/html
     volumes:
       - ./src:/var/www/html
+      - node_modules:/var/www/html/node_modules
     ports:
       - "5173:5173"
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
@@ -46,3 +48,5 @@ services:
 
 volumes:
   db_data:
+  vendor:
+  node_modules:
