@@ -4,7 +4,7 @@ set -e
 echo "=== Laravel Docker Development Setup ==="
 
 echo ""
-echo "[1/7] Preparing Laravel environment..."
+echo "[1/8] Preparing Laravel environment..."
 
 if [ ! -f "./src/.env" ]; then
     cp ./src/.env.example ./src/.env
@@ -14,32 +14,38 @@ else
 fi
 
 echo ""
-echo "[2/7] Starting Docker base services..."
+echo "[2/8] Starting Docker base services..."
 
 docker compose up -d app db phpmyadmin
 
 echo ""
-echo "[3/7] Installing PHP dependencies..."
+echo "[3/8] Installing PHP dependencies..."
 
 docker compose exec app composer install
 
 echo ""
-echo "[4/7] Generating application key..."
+echo "[4/8] Fixing Laravel permissions..."
+
+docker compose exec app chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+docker compose exec app chmod -R ug+rwX /var/www/html/storage /var/www/html/bootstrap/cache
+
+echo ""
+echo "[5/8] Generating application key..."
 
 docker compose exec app php artisan key:generate --force
 
 echo ""
-echo "[5/7] Running database migrations..."
+echo "[6/8] Running database migrations..."
 
 docker compose exec app php artisan migrate --force
 
 echo ""
-echo "[6/7] Installing Node dependencies..."
+echo "[7/8] Installing Node dependencies..."
 
 docker compose run --rm --no-deps vite npm install
 
 echo ""
-echo "[7/7] Starting application services..."
+echo "[8/8] Starting application services..."
 
 docker compose up -d web vite
 
