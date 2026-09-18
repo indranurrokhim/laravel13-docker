@@ -21,6 +21,9 @@ export default defineConfig({
         cors: {
             origin: true,
         },
+        hmr: {
+            host: process.env.VITE_DEV_HOST,
+        },
         watch: {
             ignored: ['**/storage/framework/views/**'],
         },

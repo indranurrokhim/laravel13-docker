@@ -4,7 +4,29 @@ set -e
 echo "=== Laravel Docker Development Setup ==="
 
 echo ""
-echo "[1/8] Preparing Laravel environment..."
+echo "[1/9] Detecting host IP..."
+
+VITE_DEV_HOST=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
+
+if [ -z "$VITE_DEV_HOST" ]; then
+    echo "ERROR: Could not detect host IP."
+    exit 1
+fi
+
+echo "Host IP detected: $VITE_DEV_HOST"
+
+if [ -f ".env" ]; then
+    if grep -q "^VITE_DEV_HOST=" .env; then
+        sed -i "s/^VITE_DEV_HOST=.*/VITE_DEV_HOST=$VITE_DEV_HOST/" .env
+    else
+        echo "VITE_DEV_HOST=$VITE_DEV_HOST" >> .env
+    fi
+else
+    echo "VITE_DEV_HOST=$VITE_DEV_HOST" > .env
+fi
+
+echo ""
+echo "[2/9] Preparing Laravel environment..."
 
 if [ ! -f "./src/.env" ]; then
     cp ./src/.env.example ./src/.env
@@ -14,43 +36,43 @@ else
 fi
 
 echo ""
-echo "[2/8] Starting Docker base services..."
+echo "[3/9] Starting Docker base services..."
 
 docker compose up -d app db phpmyadmin
 
 echo ""
-echo "[3/8] Installing PHP dependencies..."
+echo "[4/9] Installing PHP dependencies..."
 
 docker compose exec app composer install
 
 echo ""
-echo "[4/8] Fixing Laravel permissions..."
+echo "[5/9] Fixing Laravel permissions..."
 
 docker compose exec app chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 docker compose exec app chmod -R ug+rwX /var/www/html/storage /var/www/html/bootstrap/cache
 
 echo ""
-echo "[5/8] Generating application key..."
+echo "[6/9] Generating application key..."
 
 docker compose exec app php artisan key:generate --force
 
 echo ""
-echo "[6/8] Running database migrations..."
+echo "[7/9] Running database migrations..."
 
 docker compose exec app php artisan migrate --force
 
 echo ""
-echo "[7/8] Installing Node dependencies..."
+echo "[8/9] Installing Node dependencies..."
 
 docker compose run --rm --no-deps vite npm install
 
 echo ""
-echo "[8/8] Starting application services..."
+echo "[9/9] Starting application services..."
 
 docker compose up -d web vite
 
 echo ""
 echo "=== Setup selesai ==="
-echo "Application : http://localhost:8080"
-echo "phpMyAdmin  : http://localhost:8081"
-echo "Vite        : http://localhost:5173"
+echo "Application : http://$VITE_DEV_HOST:8080"
+echo "phpMyAdmin  : http://$VITE_DEV_HOST:8081"
+echo "Vite        : http://$VITE_DEV_HOST:5173"
