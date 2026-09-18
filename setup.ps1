@@ -4,18 +4,9 @@ Write-Host "=== Laravel Docker Setup ===" -ForegroundColor Cyan
 
 Write-Host "`n[1/7] Preparing environment..."
 
-if (-not (Test-Path ".\.env")) {
-    @"
-APP_KEY=
-APP_URL=http://localhost:8080
-
-DB_ROOT_PASSWORD=root
-DB_DATABASE=laravel13
-DB_USERNAME=laravel13
-DB_PASSWORD=laravel13
-"@ | Set-Content ".\.env"
-
-    Write-Host ".env created"
+if (-not (Test-Path ".\src\.env")) {
+    Copy-Item ".\src\.env.example" ".\src\.env"
+    Write-Host ".env created from .env.example"
 } else {
     Write-Host ".env already exists"
 }
