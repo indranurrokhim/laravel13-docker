@@ -12,3 +12,5 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /var/www/html
+
+RUN chown -R www-data:www-data /var/www/html
