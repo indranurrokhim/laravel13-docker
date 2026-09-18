@@ -1,73 +1,50 @@
-#!/bin/bash
-set -e
+$ErrorActionPreference = "Stop"
 
-echo "=== Laravel Docker Production Setup ==="
+Write-Host "=== Laravel Docker Setup ===" -ForegroundColor Cyan
 
-echo ""
-echo "[1/7] Preparing environment..."
+Write-Host "`n[1/7] Preparing environment..."
 
-if [ ! -f "./.env" ]; then
-    cat > .env <<'EOF'
+if (-not (Test-Path ".\.env")) {
+    @"
 APP_KEY=
-APP_URL=http://192.168.20.213:8080
+APP_URL=http://localhost:8080
 
 DB_ROOT_PASSWORD=root
 DB_DATABASE=laravel13
 DB_USERNAME=laravel13
 DB_PASSWORD=laravel13
-EOF
-    echo ".env created"
-else
-    echo ".env already exists"
-fi
+"@ | Set-Content ".\.env"
 
-echo ""
-echo "[2/7] Building production image..."
+    Write-Host ".env created"
+} else {
+    Write-Host ".env already exists"
+}
 
-docker compose -f docker-compose.prod.yml build
+Write-Host "`n[2/7] Starting Docker base services..."
 
-echo ""
-echo "[3/7] Generating Laravel APP_KEY..."
+docker compose up -d app db phpmyadmin
 
-if grep -q "^APP_KEY=$" .env; then
-    APP_KEY=$(docker compose -f docker-compose.prod.yml run --rm --no-deps app php artisan key:generate --show)
-    sed -i "s|^APP_KEY=.*|APP_KEY=$APP_KEY|" .env
-    echo "APP_KEY generated"
-else
-    echo "APP_KEY already exists"
-fi
+Write-Host "`n[3/7] Installing PHP dependencies..."
 
-echo ""
-echo "[4/7] Starting database..."
+docker compose exec app composer install
 
-docker compose -f docker-compose.prod.yml up -d db
+Write-Host "`n[4/7] Generating application key..."
 
-echo ""
-echo "[5/7] Waiting for database..."
+docker compose exec app php artisan key:generate --force
 
-until docker compose -f docker-compose.prod.yml exec -T db mariadb-admin ping -h localhost --silent; do
-    echo "Database is not ready yet..."
-    sleep 2
-done
+Write-Host "`n[5/7] Running database migrations..."
 
-echo "Database is ready."
+docker compose exec app php artisan migrate --force
 
-echo ""
-echo "[6/7] Starting application services..."
+Write-Host "`n[6/7] Installing Node dependencies..."
 
-docker compose -f docker-compose.prod.yml up -d
+docker compose run --rm --no-deps vite npm install
 
-echo ""
-echo "Running database migration..."
+Write-Host "`n[7/7] Starting application services..."
 
-docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
+docker compose up -d web vite
 
-echo ""
-echo "[7/7] Checking services..."
-
-docker compose -f docker-compose.prod.yml ps
-
-echo ""
-echo "=== Setup selesai ==="
-echo "Application : http://192.168.20.213:8080"
-echo "phpMyAdmin  : http://192.168.20.213:8081"
+Write-Host "`n=== Setup selesai ===" -ForegroundColor Green
+Write-Host "Application : http://localhost:8080"
+Write-Host "phpMyAdmin  : http://localhost:8081"
+Write-Host "Vite        : http://localhost:5173"
