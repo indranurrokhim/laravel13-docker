@@ -4,35 +4,54 @@ set -e
 echo "=== Laravel Docker Production Setup ==="
 
 echo ""
-echo "[1/6] Preparing environment..."
+echo "[1/7] Preparing Laravel environment..."
 if [ ! -f "./src/.env" ]; then
     cp ./src/.env.example ./src/.env
-    echo ".env created from .env.example"
+    echo "src/.env created from .env.example"
+else
+    echo "src/.env already exists"
+fi
+
+echo ""
+echo "[2/7] Preparing Docker environment..."
+if [ ! -f "./.env" ]; then
+    cat > .env <<'EOF'
+DB_ROOT_PASSWORD=root
+DB_DATABASE=laravel13
+DB_USERNAME=laravel13
+DB_PASSWORD=laravel13
+EOF
+    echo ".env created"
 else
     echo ".env already exists"
 fi
 
 echo ""
-echo "[2/6] Preparing Docker environment..."
-export DB_DATABASE="${DB_DATABASE:-laravel13}"
-export DB_USERNAME="${DB_USERNAME:-laravel13}"
-export DB_PASSWORD="${DB_PASSWORD:-laravel13}"
-export DB_ROOT_PASSWORD="${DB_ROOT_PASSWORD:-root}"
-
-echo ""
-echo "[3/6] Building production image..."
+echo "[3/7] Building production image..."
 docker compose -f docker-compose.prod.yml build
 
 echo ""
-echo "[4/6] Starting production services..."
+echo "[4/7] Starting database..."
+docker compose -f docker-compose.prod.yml up -d db
+
+echo ""
+echo "[5/7] Waiting for database..."
+until docker compose -f docker-compose.prod.yml exec -T db mariadb-admin ping -h localhost --silent; do
+    echo "Database is not ready yet..."
+    sleep 2
+done
+echo "Database is ready."
+
+echo ""
+echo "[6/7] Starting application services..."
 docker compose -f docker-compose.prod.yml up -d
 
 echo ""
-echo "[5/6] Running database migration..."
+echo "Running database migration..."
 docker compose -f docker-compose.prod.yml exec app php artisan migrate --force
 
 echo ""
-echo "[6/6] Checking services..."
+echo "[7/7] Checking services..."
 docker compose -f docker-compose.prod.yml ps
 
 echo ""
